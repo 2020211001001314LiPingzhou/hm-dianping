@@ -245,7 +245,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     private boolean tryLock(String key) {
         // setIfAbsent()相当于redis命令中的setnx
         Boolean flag = stringRedisTemplate.opsForValue().setIfAbsent(key, "1", 10, TimeUnit.SECONDS);
-        // 使用工具类是防止Boolean为null，自动拆箱为基本类型boolean时，会发生空指针异常（boolean基本类型我好像都没用过）
+        // 使用工具类是防止Boolean为null，自动拆箱为基本类型boolean时，会发生空指针异常（Boolean封装类型我好像都没用过）
         return BooleanUtil.isTrue(flag);
     }
 
@@ -262,14 +262,14 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         // 2.封装逻辑过期
         RedisData redisData = new RedisData();
         redisData.setData(shop);
-        redisData.setExpireTime(LocalDateTime.now().plusSeconds(expireSeconds));//以 当前时间加上expireSeconds 来设置逻辑过期时间
+        redisData.setExpireTime(LocalDateTime.now().plusSeconds(expireSeconds));//以当前时间 加上 expireSeconds 来设置逻辑过期时间
         // 3.写入Redis
         stringRedisTemplate.opsForValue().set(CACHE_HOT_KEY + id, JSONUtil.toJsonStr(redisData));
     }
 
 
     /**
-     * 先更新数据库，再删除缓存能降低 缓存不一致情况出现的概率
+     * 先更新数据库，再删除缓存能降低 缓存不一致情况出现的概率更低（比先删除缓存而言）
      * 直接删除缓存比更新缓存更好，频繁更新数据库时只要删除一次缓存就行了
      * redis其实不支持事务的回滚，当redis操作失败时，@Transactional注解不会回滚事务，所以这里其实也会出现不一致问题，具体见redis收藏文章：
      * 注：@Transactional只会回滚MySQL的异常，其后发生的Redis异常并不会让其回滚数据库。Redis也不会回滚（这个和Redis采用的设计策略有关：不对回滚支持，保证操作的简单快速）

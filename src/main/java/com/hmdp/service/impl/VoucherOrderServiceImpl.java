@@ -114,9 +114,11 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         Long userId = UserHolder.getUser().getId();
 
         /**
-         * 这里直接userId.toString()，底层是在堆区new了一个新的字符串对象，
-         * 虽然指向的内容相同，但是返回的地址是不同的，所以直接这样是锁不住的。
-         * intern()作用是去方法区的字符串常量池里寻找一样的字符串，并返回其地址
+         * 每次获取到的userId是局部变量，地址是不同的，使用我们需要比较的是内容，按照这个要求先toString变为字符串，
+         * 但这还没有结束，这里直接userId.toString()，底层是在堆区new了一个新的字符串对象，
+         * 虽然指向到方法区的内容相同，但是返回的堆区对象地址是不同的，所以直接这样也是锁不住的。
+         * intern()作用是去方法区的字符串常量池里寻找一样的字符串，并返回其在方法区的地址
+         * 所以userId.toString().intern()实现一样的用户id使用一把锁
          */
         //synchronized (userId.toString().intern()){
             // 5.1.查询订单

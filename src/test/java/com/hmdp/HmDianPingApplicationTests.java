@@ -48,13 +48,14 @@ class HmDianPingApplicationTests {
         for (int i = 0; i < 300; i++) {
             es.submit(task);
         }
-        latch.await(); // 等待300个线程都结束，即countDown到300才继续执行
+        latch.await(); // 等待300个线程都结束，即countDown计数到300才继续执行
         long end = System.currentTimeMillis();
         System.out.println("time = " + (end - begin));
     }
 
     @Test
     void testSaveShop() throws InterruptedException {
+        // 模拟后台进行缓存预热
         //shopService.saveShop2Redis(1L, 10L);
 
         Shop shop = shopService.getById(1L);

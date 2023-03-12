@@ -19,6 +19,7 @@ public class SimpleRedisLock implements ILock{
     }
 
     private static final String KEY_PREFIX = "lock:";
+    // 声明为常量，则这个UUID只在类创建时生成一次，UUID虽然概率低但可能存在重复，所以拼接线程Id降低标识重复概率
     private static final String ID_PREFIX = UUID.randomUUID().toString(true) + "-";
     private static final DefaultRedisScript<Long> UNLOCK_SCRIPT;
     // 静态代码块在类加载时就初始化DefaultRedisScript，避免每次newSimpleRedisLock对象都要新new一个

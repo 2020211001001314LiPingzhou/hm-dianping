@@ -18,17 +18,30 @@ import static com.hmdp.utils.RedisConstants.*;
 
 /**
  * 基于StringRedisTemplate封装工具类
+ *
  */
 @Component
 public class CacheClient {
 
-    // 请注意看方法中使用了stringRedisTemplate, 它是通过ioc注入进来的，ioc是通过new的方式创建bean
-    // new出来的对象是在堆里面，static修饰的对象是优先于对象存在的，所以这里不用static
+    // 可能有人好奇为什么工具类的方法不用static修饰
+    // 请注意看方法中使用了StringRedisTemplate, 它是通过ioc注入进来的，ioc是通过new的方式创建bean
+    // new出来的对象是在堆里面，static修饰的东西是优先于对象存在的，所以这里不用static
+    // 如果给
+
+    // @Resource和@Autowired不能为final修饰的变量注入赋值
     private final StringRedisTemplate stringRedisTemplate;
 
+    // SpringIoc容器默认先使用
     public  CacheClient(StringRedisTemplate stringRedisTemplate) {
         this.stringRedisTemplate = stringRedisTemplate;
     }
+
+    /*
+    // final修饰的变量不能通过set方法赋值，因为在无参构造时，他便会被默认赋值为null，不能再修改
+    public void setStringRedisTemplate(StringRedisTemplate stringRedisTemplate) {
+        this.stringRedisTemplate = stringRedisTemplate;
+    }
+    */
 
     /**
      * 缓存存入
