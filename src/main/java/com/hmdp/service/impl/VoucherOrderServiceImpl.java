@@ -13,6 +13,8 @@ import com.hmdp.utils.ILock;
 import com.hmdp.utils.RedisIdWorker;
 import com.hmdp.utils.SimpleRedisLock;
 import com.hmdp.utils.UserHolder;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -41,6 +43,9 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
+    @Resource
+    private RedissonClient redissonClient;
+
     @Override
     public Result seckillVoucher(Long voucherId) {
         // 1.查询优惠券信息
@@ -66,10 +71,11 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
          *  那么还是会出现一人抢多单情况。对于分布式系统来说，用synchronized显然是不合适了，需要让所有服务器都共享同一个锁才行，所以要使用分布式锁，
          *  其中用redis的set lock thread1 nx ex 10就是一种实现方式。
          */
-        // 创建锁对象
-        SimpleRedisLock lock = new SimpleRedisLock("order:" + userId, stringRedisTemplate);
-        // 获取锁
-        boolean isLock = lock.tryLock(1200); // 设置时间长点是便于断点测试
+        // 创建锁对象 (用Redisson替换掉我们自己写锁)
+        //SimpleRedisLock lock = new SimpleRedisLock("order:" + userId, stringRedisTemplate);
+        RLock lock = redissonClient.getLock("lock:order:" + userId);
+        // 获取锁（无参采用默认值：waitTime:-1 不阻塞等待、leaseTime:30 超时时间30秒、 TimeUtil.SECOND）
+        boolean isLock = lock.tryLock();
         // 判断是否获取锁成功
         if (!isLock) {
             // 获取锁失败，返回错误或重试
