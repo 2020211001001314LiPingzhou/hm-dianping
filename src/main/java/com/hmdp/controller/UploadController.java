@@ -22,7 +22,7 @@ public class UploadController {
         try {
             // 获取原始文件名称
             String originalFilename = image.getOriginalFilename();
-            // 生成新文件名
+            // 生成新文件名 hash打两级散+图片重命名
             String fileName = createNewFileName(originalFilename);
             // 保存文件
             image.transferTo(new File(SystemConstants.IMAGE_UPLOAD_DIR, fileName));
