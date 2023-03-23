@@ -60,7 +60,7 @@ public class RefreshTokenInterceptor implements HandlerInterceptor {
     }
 
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
-        // 移除用户
-        UserHolder.removeUser();
+        /*// 移除用户
+        UserHolder.removeUser();*/
     }
 }

@@ -12,13 +12,19 @@ import com.hmdp.entity.User;
 import com.hmdp.mapper.UserMapper;
 import com.hmdp.service.IUserService;
 import com.hmdp.utils.RegexUtils;
+import com.hmdp.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.connection.BitFieldSubCommands;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -116,6 +122,69 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
         // 8.返回token
         return Result.ok(token);
+    }
+
+    /**
+     * 用户签到
+     * @return
+     */
+    @Override
+    public Result sign() {
+        // 1.获取当前登录用户
+        Long userId = UserHolder.getUser().getId();
+        // 2.获取日期 LocalDateTime是final修饰的类，不能向Date一样直接new对象
+        LocalDateTime now = LocalDateTime.now();
+        // 3.拼接key
+        String keySuffix = now.format(DateTimeFormatter.ofPattern(":yyyyMM"));
+        String key = USER_SIGN_KEY + userId + keySuffix;
+        // 4.获取今天是本月的前几天
+        int dayOfMonth = now.getDayOfMonth();
+        // 5.写入Redis： SETBIT key offset 1
+        // Redis中bitMap类型底层是用String实现的，所以在java中对bitMap的api操作全部放到ValueOperations中了
+        stringRedisTemplate.opsForValue().setBit(key, dayOfMonth - 1, true); //sign:68:202303 = 000000000000000000000010 最后多一个0是因为位是按字节存储的，这里要3个字节
+        return Result.ok();
+    }
+
+    @Override
+    public Result signCount() {
+        // 1.获取当前登录用户
+        Long userId = UserHolder.getUser().getId();
+        // 2.获取日期 LocalDateTime是final修饰的类，不能向Date一样直接new对象
+        LocalDateTime now = LocalDateTime.now();
+        // 3.拼接key
+        String keySuffix = now.format(DateTimeFormatter.ofPattern(":yyyyMM"));
+        String key = USER_SIGN_KEY + userId + keySuffix;
+        // 4.获取今天是本月的前几天
+        int dayOfMonth = now.getDayOfMonth();
+        // 5.获取本月截止今天为止的所有签到记录，返回的是一个十进制的数字 BITFIELD sign:5:202303 GET u23 0 //从0号位开始，查23个，u表示返回结果为无符号的十进制数
+        List<Long> result = stringRedisTemplate.opsForValue().bitField(
+                key,
+                BitFieldSubCommands.create().get(BitFieldSubCommands.BitFieldType.unsigned(dayOfMonth)).valueAt(0)
+        );
+        if (result == null || result.isEmpty()) {
+            // 没有任何签到结果
+            return Result.ok(0);
+        }
+        Long num = result.get(0);
+        if (num == null || num == 0) {
+            return Result.ok(0);
+        }
+        // 6.循环遍历
+        int count = 0;
+        while (true) {
+            // 6.1.让这个数字与1做与运算，得到数字的最后一个bit位
+            if ((num & 1) == 0) {
+                // 6.2.判断这个bit位是否为0
+                // 6.3.为0.说明未签到，结束
+                break;
+            }
+            // 6.4.不为0，说明签过到，计数器+1
+            count++;
+            // 6.5.把数字右移一位，抛弃最后一个bit位，继续下一个bit位的判断
+            //num = num >> 1;
+            num >>>= 1; // >>>=表示右移后的结果覆盖掉原来的num， >>>表示无符号右移，>>表示右移移，如果为正数则高位补0，如果为负数则高位补1
+        }
+        return Result.ok(count);
     }
 
     private User createUserWithPhone(String phone) {

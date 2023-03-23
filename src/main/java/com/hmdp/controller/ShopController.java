@@ -62,6 +62,7 @@ public class ShopController {
 
     /**
      * 根据商铺类型分页查询商铺信息
+     * 改造2.0：增加根据地理位置坐标来查询附近商铺功能
      * @param typeId 商铺类型
      * @param current 页码
      * @return 商铺列表
@@ -69,14 +70,12 @@ public class ShopController {
     @GetMapping("/of/type")
     public Result queryShopByType(
             @RequestParam("typeId") Integer typeId,
-            @RequestParam(value = "current", defaultValue = "1") Integer current
+            @RequestParam(value = "current", defaultValue = "1") Integer current,
+            /*required = false 当请求参数没有经纬度坐标，则还是从数据库中查询商铺*/
+            @RequestParam(value = "x", required = false) Double x,
+            @RequestParam(value = "y", required = false) Double y
     ) {
-        // 根据类型分页查询
-        Page<Shop> page = shopService.query()
-                .eq("type_id", typeId)
-                .page(new Page<>(current, SystemConstants.DEFAULT_PAGE_SIZE));
-        // 返回数据
-        return Result.ok(page.getRecords());
+        return shopService.queryShopByType(typeId, current, x, y);
     }
 
     /**
